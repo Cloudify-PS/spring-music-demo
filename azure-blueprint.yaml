@@ -1,0 +1,149 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
+  - http://www.getcloudify.org/spec/azure-plugin/1.4.3/plugin.yaml
+
+inputs:
+  subscription_id:
+    type: string
+    default: { get_secret: default_azure_subscription_id }
+  tenant_id:
+    type: string
+    default: { get_secret: default_azure_tenant_id }
+  client_id:
+    type: string
+    default: { get_secret: default_azure_client_id }
+  client_secret:
+    type: string
+    default: { get_secret: default_azure_client_secret }
+  resource_group:
+    type: string
+    default: { get_secret: default_azure_resource_group }
+  availability_set:
+    type: string
+    default: { get_secret: default_azure_availability_set }
+  location:
+    type: string
+    default: { get_secret: default_azure_location }
+  security_group_name:
+    type: string
+  agent_user:
+    type: string
+    default: centos
+  image:
+    type: string
+  vm_size:
+    type: string
+
+dsl_definitions:
+  azure_config: &azure_config
+    subscription_id: { get_input: subscription_id }
+    tenant_id: { get_input: tenant_id }
+    client_id: { get_input: client_id }
+    client_secret: { get_input: client_secret }
+
+node_templates:
+  resource_group:
+    type: cloudify.azure.nodes.ResourceGroup
+    properties:
+      azure_config: *azure_config
+      name: { get_input: resource_group }
+      location: { get_input: location }
+
+ storage_account:
+    type: cloudify.azure.nodes.storage.StorageAccount
+    properties:
+      azure_config: *azure_config
+      location: { get_input: location }
+      resource_config:
+        accountType: Standard_LRS
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_resource_group
+      target: resource_group
+
+  availability_set:
+    type: cloudify.azure.nodes.compute.AvailabilitySet
+    properties:
+      azure_config: *azure_config
+      location: { get_input: location }
+      name: { get_input: availability_set }
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_resource_group
+      target: resource_group
+
+  network_security_group:
+    type: cloudify.azure.nodes.network.NetworkSecurityGroup
+    properties:
+      azure_config: *azure_config
+      name: { get_input: security_group_name }
+      location: { get_input: location }
+      resource_config:
+        securityRules:
+        - name: http_access
+          properties:
+            description: HTTP access
+            protocol: Tcp
+            sourcePortRange: '*'
+            destinationPortRange: 80
+            sourceAddressPrefix: '*'
+            destinationAddressPrefix: '*'
+            priority: 102
+            access: Allow
+            direction: Inbound
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_resource_group
+      target: resource_group
+
+  nic:
+    type: cloudify.azure.nodes.network.NetworkInterfaceCard
+    properties:
+      azure_config: *azure_config
+      location: { get_input: location }
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_resource_group
+      target: resource_group
+    - type: cloudify.azure.relationships.nic_connected_to_network_security_group
+      target: security_group
+    - type: cloudify.azure.relationships.nic_connected_to_ip_configuration
+      target: ip_configuration
+
+  ip_configuration:
+    type: cloudify.azure.nodes.network.IPConfiguration
+    properties:
+      azure_config: *azure_config
+      location: { get_input: location }
+      resource_config:
+        privateIPAllocationMethod: Dynamic
+    relationships:
+    - type: cloudify.azure.relationships.ip_configuration_connected_to_subnet
+      target: subnet
+
+  server:
+    type: cloudify.azure.nodes.compute.VirtualMachine
+    properties:
+      azure_config: *azure_config
+      agent_config:
+        user: { get_input: agent_user }
+        key: { get_secret: private_key_path }
+      os_family: linux
+      location: { get_input: location }
+      resource_config:
+        hardwareProfile:
+          vmSize: { get_input: size }
+        storageProfile:
+          imageReference: { get_input: image}
+        osProfile:
+          adminUsername: { get_input: agent_user }
+          adminPassword: ''
+          linuxConfiguration:
+            disablePasswordAuthentication: true
+    relationships:
+    - type: cloudify.azure.relationships.contained_in_resource_group
+      target: resource_group
+    - type: cloudify.azure.relationships.connected_to_storage_account
+      target: storage_account
+    - type: cloudify.azure.relationships.connected_to_availability_set
+      target: availability_set
+    - type: cloudify.azure.relationships.connected_to_nic
+      target: nic

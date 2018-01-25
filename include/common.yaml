@@ -1,0 +1,40 @@
+node_templates:
+  os_config:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/initialize.sh
+    relationships:
+      - target: server
+        type: cloudify.relationships.contained_in
+
+  nginx:
+    type: cloudify.nodes.WebServer
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/nginx/install.sh
+    relationships:
+      - target: server
+        type: cloudify.relationships.contained_in
+      - target: os_config
+        type: cloudify.relationships.depends_on
+      - target: music
+        type: cloudify.relationships.connected_to
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            postconfigure:
+              implementation: scripts/nginx/add-upstream-def.sh
+
+  music:
+    type: cloudify.nodes.SoftwareComponent
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/music/install.sh
+        start: scripts/music/start.sh
+        stop: scripts/music/stop.sh
+        delete: scripts/music/delete.sh
+    relationships:
+      - target: server
+        type: cloudify.relationships.contained_in
+      - target: os_config
+        type: cloudify.relationships.depends_on

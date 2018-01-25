@@ -1,0 +1,140 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
+  - http://www.getcloudify.org/spec/aws-plugin/1.5.1.2/plugin.yaml
+  - include/common.yaml
+
+inputs:
+  # AWS connection.
+  aws_access_key_id:
+    type: string
+    default: { get_secret: aws_access_key_id }
+  aws_secret_access_key:
+    type: string
+    default: { get_secret: aws_secret_access_key }
+  region_name:
+    type: string
+    default: { get_secret: ec2_region_name }
+  # Agent-related.
+  agents_security_group_id:
+    type: string
+    default: { get_secret: agents_security_group_id }
+  agent_user:
+    type: string
+    default: ubuntu
+  keypair_name:
+    type: string
+    default: { get_secret: default_keypair_name }
+  private_key_path:
+    type: string
+    default: { get_secret: default_private_key_path }
+  subnet_id:
+    type: string
+    default: { get_secret: default_subnet_id }
+  vpc_id:
+    type: string
+    default: { get_secret: default_vpc_id }
+  image_id:
+    type: string
+    default: ami-349c1950
+  instance_type:
+    type: string
+    default: t2.micro
+
+dsl_definitions:
+  aws_config: &aws_config
+    aws_access_key_id: { get_input: aws_access_key_id }
+    aws_secret_access_key: { get_input: aws_secret_access_key }
+    ec2_region_name: { get_input: region_name }
+
+node_templates:
+  keypair:
+    type: cloudify.aws.nodes.KeyPair
+    properties:
+      aws_config: *aws_config
+      use_external_resource: true
+      resource_id: { get_input: keypair_name }
+      private_key_path: { get_input: private_key_path }
+
+  agents_security_group:
+    type: cloudify.aws.nodes.SecurityGroup
+    properties:
+      aws_config: *aws_config
+      use_external_resource: true
+      resource_id: { get_input: agents_security_group_id }
+      description: ''
+
+  app_security_group:
+    type: cloudify.aws.nodes.SecurityGroup
+    properties:
+      aws_config: *aws_config
+      resource_id: music_security_group
+      description: Security Group for the Music app
+      rules:
+        - ip_protocol: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+
+  elastic_ip:
+    type: cloudify.aws.nodes.ElasticIP
+    properties:
+      aws_config: *aws_config
+      domain: vpc
+
+  vpc:
+    type: cloudify.aws.nodes.VPC
+    properties:
+      aws_config: *aws_config
+      use_external_resource: true
+      resource_id: { get_input: vpc_id }
+      cidr_block: ''
+
+  subnet:
+    type: cloudify.aws.nodes.Subnet
+    properties:
+      aws_config: *aws_config
+      use_external_resource: true
+      resource_id: { get_input: subnet_id }
+      cidr_block: ''
+    relationships:
+      - type: cloudify.aws.relationships.subnet_contained_in_vpc
+        target: vpc
+
+  server:
+    type: cloudify.aws.nodes.Instance
+    properties:
+      aws_config: *aws_config
+      agent_config:
+        install_method: init_script
+        user: { get_input: agent_user }
+        key: { get_input: private_key_path }
+      image_id: { get_input: image_id }
+      instance_type: { get_input: instance_type }
+      name: server
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          inputs:
+            args:
+              user_data: |
+                #!/bin/bash -e
+                apt-get -y install python
+        configure:
+          implementation: aws.cloudify_aws.ec2.instance.modify_attributes
+          inputs:
+            new_attributes:
+              blockDeviceMapping: ['/dev/sda1=true']
+
+    relationships:
+      - target: keypair
+        type: cloudify.aws.relationships.instance_connected_to_keypair
+      - target: elastic_ip
+        type: cloudify.aws.relationships.instance_connected_to_elastic_ip
+      - target: agents_security_group
+        type: cloudify.aws.relationships.instance_connected_to_security_group
+      - target: app_security_group
+        type: cloudify.aws.relationships.instance_connected_to_security_group
+      - target: subnet
+        type: cloudify.aws.relationships.instance_connected_to_subnet
