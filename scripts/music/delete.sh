@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-root_dir=$(ctx instance runtime_properties root_dir)
-ctx logger info "Deleting ${root_dir}..."
-rm -rf ${root_dir}
+app_file=$(ctx instance runtime_properties app_file)
+ctx logger info "Deleting ${app_file}..."
+sudo rm -rf ${app_file}
 ctx logger info "Done."

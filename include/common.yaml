@@ -1,3 +1,16 @@
+node_types:
+  types.music:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      install_dir:
+        type: string
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/music/install.sh
+        start: scripts/music/start.sh
+        stop: scripts/music/stop.sh
+        delete: scripts/music/delete.sh
+
 node_templates:
   os_config:
     type: cloudify.nodes.Root
@@ -26,13 +39,9 @@ node_templates:
               implementation: scripts/nginx/add-upstream-def.sh
 
   music:
-    type: cloudify.nodes.SoftwareComponent
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        create: scripts/music/install.sh
-        start: scripts/music/start.sh
-        stop: scripts/music/stop.sh
-        delete: scripts/music/delete.sh
+    type: types.music
+    properties:
+      install_dir: { get_input: install_dir }
     relationships:
       - target: server
         type: cloudify.relationships.contained_in

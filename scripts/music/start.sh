@@ -1,10 +1,10 @@
 #!/bin/bash -e
 
-app_dir=$(ctx instance runtime_properties app_dir)
+app_file=$(ctx instance runtime_properties app_file)
 log_file=/tmp/music.log
-ctx logger info "Starting application at ${app_dir}, logging to ${log_file}..."
+ctx logger info "Starting application at ${app_file}, logging to ${log_file}..."
 
-nohup java -jar ${app_dir} > ${log_file} 2>&1 &
+nohup java -jar ${app_file} > ${log_file} 2>&1 &
 pid=$!
 
 ctx logger info "Done; PID is ${pid}"
