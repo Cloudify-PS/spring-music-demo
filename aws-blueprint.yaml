@@ -42,9 +42,6 @@ inputs:
   instance_type:
     type: string
     default: t2.micro
-  install_dir:
-    type: string
-    default: /opt/music
 
 dsl_definitions:
   aws_config: &aws_config

@@ -1,3 +1,8 @@
+inputs:
+  install_dir:
+    type: string
+    default: /opt/music
+
 node_types:
   types.music:
     derived_from: cloudify.nodes.SoftwareComponent
