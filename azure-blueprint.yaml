@@ -3,6 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
   - http://www.getcloudify.org/spec/azure-plugin/1.4.3/plugin.yaml
+  - http://www.getcloudify.org/spec/fabric-plugin/1.5.1/plugin.yaml
   - include/common.yaml
 
 inputs:
@@ -47,6 +48,7 @@ inputs:
     default: { get_secret: default_azure_vm_size }
   security_group_name:
     type: string
+    default: music-security-group
   agent_user:
     type: string
     default: ubuntu
@@ -54,10 +56,15 @@ inputs:
     default:
       - path: {concat:[ '/home/', { get_input: agent_user }, '/.ssh/authorized_keys' ]}
         keyData: { get_secret: default_azure_private_key_data }
-
   private_key_path:
     type: string
     default: { get_secret: default_private_key_path }
+  cfy_network_name:
+    type: string
+    default: public
+  use_public_ip:
+    type: boolean
+    default: true
 
 dsl_definitions:
   azure_config: &azure_config
@@ -195,8 +202,10 @@ node_templates:
         user: { get_input: agent_user }
         key: { get_input: private_key_path }
         port: 22
+        network: { get_input: cfy_network_name }
       os_family: linux
       location: { get_input: location }
+      use_public_ip: { get_input: use_public_ip }
       resource_config:
         hardwareProfile:
           vmSize: { get_input: vm_size }
@@ -218,3 +227,7 @@ node_templates:
       target: availability_set
     - type: cloudify.azure.relationships.connected_to_nic
       target: nic
+
+outputs:
+  url:
+    value: { concat: ['http://', { get_attribute: [ server, public_ip ]}] }

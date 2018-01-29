@@ -42,6 +42,9 @@ inputs:
   instance_type:
     type: string
     default: t2.micro
+  cfy_network_name:
+    type: string
+    default: default
 
 dsl_definitions:
   aws_config: &aws_config
@@ -111,6 +114,7 @@ node_templates:
         install_method: init_script
         user: { get_input: agent_user }
         key: { get_input: private_key_path }
+        network: { get_input: cfy_network_name }
       image_id: { get_input: image_id }
       instance_type: { get_input: instance_type }
       name: server

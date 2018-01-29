@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+exec >> ~/music-install.log 2>&1
+
 install_dir=$(ctx node properties install_dir)
 jar_file=spring-music.jar
 

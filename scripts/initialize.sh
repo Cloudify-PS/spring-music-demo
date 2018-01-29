@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+exec >> ~/initialize.log 2>&1
+
 ctx logger info "Adding OpenJDK's repository..."
 sudo add-apt-repository ppa:openjdk-r/ppa -y
 sudo apt-get -y update

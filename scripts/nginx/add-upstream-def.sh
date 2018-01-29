@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+exec >> ~/add-upstream-def.log 2>&1
+
 cat <<EOF | sudo tee /etc/nginx/sites-available/music
 server {
   location / {

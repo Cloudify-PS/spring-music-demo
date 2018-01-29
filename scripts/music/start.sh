@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+exec >> ~/music-start.log 2>&1
+
 app_file=$(ctx instance runtime_properties app_file)
 log_file=/tmp/music.log
 ctx logger info "Starting application at ${app_file}, logging to ${log_file}..."
