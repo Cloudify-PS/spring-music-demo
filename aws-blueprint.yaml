@@ -10,32 +10,32 @@ inputs:
   # AWS connection.
   aws_access_key_id:
     type: string
-    default: { get_secret: aws_access_key_id }
+    default: { get_secret: aws_default_access_key_id }
   aws_secret_access_key:
     type: string
-    default: { get_secret: aws_secret_access_key }
+    default: { get_secret: aws_default_secret_access_key }
   region_name:
     type: string
-    default: { get_secret: ec2_region_name }
+    default: { get_secret: aws_default_ec2_region_name }
   # Agent-related.
   agents_security_group_id:
     type: string
-    default: { get_secret: agents_security_group_id }
+    default: { get_secret: aws_default_agents_security_group_id }
   agent_user:
     type: string
     default: ubuntu
   keypair_name:
     type: string
-    default: { get_secret: default_keypair_name }
+    default: { get_secret: aws_default_keypair_name }
   private_key_path:
     type: string
-    default: { get_secret: default_private_key_path }
+    default: { get_secret: aws_default_private_key_path }
   subnet_id:
     type: string
-    default: { get_secret: default_subnet_id }
+    default: { get_secret: aws_default_subnet_id }
   vpc_id:
     type: string
-    default: { get_secret: default_vpc_id }
+    default: { get_secret: aws_default_vpc_id }
   image_id:
     type: string
     default: ami-349c1950
