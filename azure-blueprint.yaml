@@ -46,9 +46,7 @@ inputs:
   vm_size:
     type: string
     default: { get_secret: default_azure_vm_size }
-  security_group_name:
-    type: string
-    default: music-security-group
+
   agent_user:
     type: string
     default: ubuntu
@@ -105,7 +103,6 @@ node_templates:
     type: cloudify.azure.nodes.network.NetworkSecurityGroup
     properties:
       azure_config: *azure_config
-      name: { get_input: security_group_name }
       location: { get_input: location }
       resource_config:
         securityRules:
