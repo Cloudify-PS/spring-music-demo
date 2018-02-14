@@ -53,10 +53,6 @@ inputs:
   vm_size:
     type: string
     default: { get_secret: default_azure_vm_size }
-
-  agent_user:
-    type: string
-    default: ubuntu
   public_keys:
     default:
       - path: {concat:[ '/home/', { get_input: agent_user }, '/.ssh/authorized_keys' ]}
@@ -64,9 +60,6 @@ inputs:
   private_key_path:
     type: string
     default: { get_secret: default_private_key_path }
-  cfy_network_name:
-    type: string
-    default: public
   use_public_ip:
     type: boolean
     default: true

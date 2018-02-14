@@ -25,9 +25,6 @@ inputs:
   agents_security_group_id:
     type: string
     default: { get_secret: aws_default_agents_security_group_id }
-  agent_user:
-    type: string
-    default: ubuntu
   keypair_name:
     type: string
     default: { get_secret: aws_default_keypair_name }
@@ -46,9 +43,6 @@ inputs:
   instance_type:
     type: string
     default: t2.micro
-  cfy_network_name:
-    type: string
-    default: default
 
 dsl_definitions:
   aws_config: &aws_config

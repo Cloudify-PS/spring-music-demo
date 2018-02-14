@@ -2,6 +2,17 @@
 # topology. Meant to be reusable across IaaS.
 
 inputs:
+  cfy_network_name:
+    description: |
+      The Cloudify Network name to use, in order to derive the IP address by which
+      the agent refers to the manager.
+      The default is "default", meaning that the "default" Manager Network is used.
+      The "default" Manager Network always resolves to the manager's private IP address.
+    type: string
+    default: default
+  agent_user:
+    type: string
+    default: ubuntu
   install_dir:
     type: string
     default: /opt/music
