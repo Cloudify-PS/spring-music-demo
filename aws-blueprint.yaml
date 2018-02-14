@@ -1,5 +1,9 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
+# Deploys the "music" app on AWS.
+# This file contains all of the Azure-specific parts, and includes
+# the IaaS-agnostic YAML file for the application-centric templates.
+
 imports:
   - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
   - http://www.getcloudify.org/spec/aws-plugin/1.5.1.2/plugin.yaml
@@ -123,6 +127,9 @@ node_templates:
         create:
           inputs:
             args:
+              # On AWS, the official Ubuntu 16.x image doesn't ship
+              # with Python 2. Therefore, it must be installed before the agent
+              # installation is attempted. We use userdata for this.
               user_data: |
                 #!/bin/bash -e
                 apt-get -y install python
@@ -130,6 +137,7 @@ node_templates:
           implementation: aws.cloudify_aws.ec2.instance.modify_attributes
           inputs:
             new_attributes:
+              # Sets "delete-on-termination" on /dev/sda1.
               blockDeviceMapping: ['/dev/sda1=true']
 
     relationships:

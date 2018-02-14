@@ -1,3 +1,6 @@
+# This file contains the application (IaaS-agnostic) aspect of the
+# topology. Meant to be reusable across IaaS.
+
 inputs:
   install_dir:
     type: string

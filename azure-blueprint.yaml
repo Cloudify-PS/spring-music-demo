@@ -1,5 +1,9 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
+# Deploys the "music" app on Azure.
+# This file contains all of the Azure-specific parts, and includes
+# the IaaS-agnostic YAML file for the application-centric templates.
+
 imports:
   - http://www.getcloudify.org/spec/cloudify/4.2/types.yaml
   - http://www.getcloudify.org/spec/azure-plugin/1.4.3/plugin.yaml
@@ -34,6 +38,9 @@ inputs:
   subnet_name:
     type: string
     default: { get_secret: default_azure_subnet_name }
+  cidr_mask:
+    type: string
+    default: 10.10.0.0/16
   storage_account_name:
     type: string
     default: { get_secret: default_azure_storage_account_name }
@@ -76,15 +83,17 @@ node_templates:
     type: cloudify.azure.nodes.ResourceGroup
     properties:
       azure_config: *azure_config
-      use_external_resource: true
       name: { get_input: resource_group }
+      location: { get_input: location }
 
   storage_account:
     type: cloudify.azure.nodes.storage.StorageAccount
     properties:
       azure_config: *azure_config
-      use_external_resource: true
       name: { get_input: storage_account_name }
+      location: { get_input: location }
+      resource_config:
+        accountType: Standard_LRS
     relationships:
     - type: cloudify.azure.relationships.contained_in_resource_group
       target: resource_group
@@ -93,8 +102,8 @@ node_templates:
     type: cloudify.azure.nodes.compute.AvailabilitySet
     properties:
       azure_config: *azure_config
-      use_external_resource: true
       name: { get_input: availability_set }
+      location: { get_input: location }
     relationships:
     - type: cloudify.azure.relationships.contained_in_resource_group
       target: resource_group
@@ -117,6 +126,11 @@ node_templates:
             priority: 102
             access: Allow
             direction: Inbound
+        # SSH access is required because, as of Azure Plugin 1.4.3, the only
+        # supported way to install an agent is the "remote" method (which requires
+        # SSH).
+        # The sourceAddressPrefix, in a production environment, should be more
+        # specific than "*" and only include the address of the manager.
         - name: ssh
           properties:
             description: SSH access
@@ -149,8 +163,12 @@ node_templates:
     type: cloudify.azure.nodes.network.VirtualNetwork
     properties:
       azure_config: *azure_config
-      use_external_resource: true
       name: { get_input: virtual_network_name }
+      location: { get_input: location }
+      resource_config:
+        addressSpace:
+          addressPrefixes:
+            - { get_input: cidr_mask }
     relationships:
     - type: cloudify.azure.relationships.contained_in_resource_group
       target: resource_group
@@ -159,9 +177,9 @@ node_templates:
     type: cloudify.azure.nodes.network.Subnet
     properties:
       azure_config: *azure_config
-      use_external_resource: true
-      resource_group_name: { get_property: [resource_group, name] }
       name: { get_input: subnet_name }
+      resource_config:
+        addressPrefix: { get_input: cidr_mask }
     relationships:
     - type: cloudify.azure.relationships.contained_in_virtual_network
       target: virtual_network
@@ -199,9 +217,19 @@ node_templates:
         user: { get_input: agent_user }
         key: { get_input: private_key_path }
         port: 22
+        # Specifies the name of the "Cloudify Network" through which the agent
+        # should connect to the manager.
+        # The value provided here must correspond to a key in the /etc/cloudify/ssl/certificate_metadata
+        # file, denoting the name of a logical Cloudify Network.
+        # The default value of this keyword is "default", which, on the manager,
+        # translates to the manager's private IP address.
         network: { get_input: cfy_network_name }
       os_family: linux
       location: { get_input: location }
+      # Since we're using the "remote" agent installation method, the manager
+      # must have routable access to the agent VM. Unless more complex setup
+      # is in place, this can only be done by accessing the VM through its
+      # public IP.
       use_public_ip: { get_input: use_public_ip }
       resource_config:
         hardwareProfile:
@@ -210,6 +238,7 @@ node_templates:
           imageReference: { get_input: image}
         osProfile:
           adminUsername: { get_input: agent_user }
+          # The password is irrelevant because we use key-based authentication.
           adminPassword: ''
           linuxConfiguration:
             ssh:
